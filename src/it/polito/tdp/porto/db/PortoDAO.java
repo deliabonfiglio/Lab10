@@ -97,24 +97,31 @@ public class PortoDAO {
 	}
 
 	/*
-	 * Dato l'id ottengo l'articolo.
+	 * ottengo la mappa di articoli
 	 */
-	public Paper getArticolo(int eprintid) {
+	public Paper getArticolo(Author a1, Author a2) {
 
-		final String sql = "SELECT * FROM paper where eprintid=?";
-
+		final String sql = "select paper.* "+
+				"from paper , creator "+
+				"where paper.eprintid= creator.eprintid and creator.authorid = ? and creator.eprintid in ( select eprintid "+
+					"from creator "+
+					"where authorid = ? )";
+		
 		try {
 			Connection conn = DBConnect.getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
-			st.setInt(1, eprintid);
 
+			st.setInt(1, a1.getId());
+			st.setInt(2, a2.getId());
+			
 			ResultSet rs = st.executeQuery();
 
-			if (rs.next()) {
+			if(rs.next()) {
 				Paper paper = new Paper(rs.getInt("eprintid"), rs.getString("title"), rs.getString("issn"),
 						rs.getString("publication"), rs.getString("type"), rs.getString("types"));
 				return paper;
 			}
+			
 			conn.close();
 			return null;
 
@@ -123,4 +130,7 @@ public class PortoDAO {
 			throw new RuntimeException("Errore Db");
 		}
 	}
+	
+	
+	
 }
