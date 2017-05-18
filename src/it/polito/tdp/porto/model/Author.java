@@ -7,12 +7,14 @@ public class Author {
 	private int id;
 	private String lastname;
 	private String firstname;
+	private List<Paper> papers;
 		
 	public Author(String lastname, String firstname, int id) {
 		super();
 		this.id = id;
 		this.lastname = lastname;
 		this.firstname = firstname;
+		this.papers= new ArrayList<Paper>();
 	}
 
 	public int getId() {
@@ -75,5 +77,9 @@ public class Author {
 	@Override
 	public String toString() {
 		return id+ " "+lastname + ", " + firstname + "\n";
+	}
+
+	public List<Paper> getArticles() {
+		return papers;
 	}
 }

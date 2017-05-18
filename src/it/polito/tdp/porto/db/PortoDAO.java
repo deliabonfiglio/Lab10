@@ -7,14 +7,16 @@ import java.sql.SQLException;
 import java.util.*;
 
 import it.polito.tdp.porto.model.Author;
+import it.polito.tdp.porto.model.AuthorIdMap;
 import it.polito.tdp.porto.model.Paper;
+import it.polito.tdp.porto.model.PaperIdMap;
 
 public class PortoDAO {
-
-	public Map<Integer, Author> getAllAuthors() {
-
+	
+	public List<Author> listAuthors(AuthorIdMap authorMap) {
+		
 		final String sql = "SELECT * FROM author ORDER BY lastname";
-		Map<Integer, Author> authors = new TreeMap<Integer, Author>();
+		List<Author> authors = new ArrayList<Author>();
 		
 		try {
 			Connection conn = DBConnect.getConnection();
@@ -23,21 +25,25 @@ public class PortoDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-
-				Author autore = new Author(rs.getString("lastname"), rs.getString("firstname"),rs.getInt("id"));
-				if(!authors.containsKey(autore.getId()))
-					authors.put(autore.getId(), autore);
+				Author autore=authorMap.get(rs.getInt("id"));
+				
+				if( autore ==null){
+					autore = new Author(rs.getString("lastname"), rs.getString("firstname"),rs.getInt("id"));
+					autore = authorMap.put(autore);
+				}
+				
+				authors.add(autore);
 			}
 			conn.close();
 			return authors;
 
 		} catch (SQLException e) {
-			// e.printStackTrace();
+			e.printStackTrace();
 			throw new RuntimeException("Errore Db");
 		}
 	}
 	
-	public List<Author> getCoauthors(Author autore) {
+	public List<Author> getCoauthors(Author autore, AuthorIdMap authorMap) {
 
 		final String sql = "SELECT DISTINCT c2.authorid "+
 							"FROM creator as c1, creator as c2 "+
@@ -54,7 +60,7 @@ public class PortoDAO {
 			while (rs.next()) {
 
 				int id= rs.getInt("authorid");
-				Author autor = this.getAllAuthors().get(id);
+				Author autor = authorMap.get(id);
 						
 				coauthors.add(autor);
 			}
@@ -62,71 +68,39 @@ public class PortoDAO {
 			return coauthors;
 
 		} catch (SQLException e) {
-			// e.printStackTrace();
-			throw new RuntimeException("Errore Db");
-		}
-	}
-	
-	
-	/*
-	 * Dato l'id ottengo l'autore.
-	 */
-	public Author getAutore(int id) {
-
-		final String sql = "SELECT * FROM author where id=?";
-
-		try {
-			Connection conn = DBConnect.getConnection();
-			PreparedStatement st = conn.prepareStatement(sql);
-			st.setInt(1, id);
-
-			ResultSet rs = st.executeQuery();
-
-			if (rs.next()) {
-
-				Author autore = new Author(rs.getString("lastname"), rs.getString("firstname"),rs.getInt("id"));
-				return autore;
-			}
-			conn.close();
-			return null;
-
-		} catch (SQLException e) {
-			// e.printStackTrace();
+			e.printStackTrace();
 			throw new RuntimeException("Errore Db");
 		}
 	}
 
-	/*
-	 * ottengo la mappa di articoli
-	 */
-	public Paper getArticolo(Author a1, Author a2) {
-
-		final String sql = "select paper.* "+
-				"from paper , creator "+
-				"where paper.eprintid= creator.eprintid and creator.authorid = ? and creator.eprintid in ( select eprintid "+
-					"from creator "+
-					"where authorid = ? )";
-		
+	public void getArticolsOfAuthor(Author a, PaperIdMap paperIdMap) {
+		final String sql = "select p.* "+
+							"from paper as p, creator as c "+
+							"where p.eprintid=c.eprintid and c.authorid= ? ";
+			
 		try {
 			Connection conn = DBConnect.getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
-
-			st.setInt(1, a1.getId());
-			st.setInt(2, a2.getId());
 			
+			st.setInt(1, a.getId());
+
 			ResultSet rs = st.executeQuery();
 
-			if(rs.next()) {
-				Paper paper = new Paper(rs.getInt("eprintid"), rs.getString("title"), rs.getString("issn"),
-						rs.getString("publication"), rs.getString("type"), rs.getString("types"));
-				return paper;
-			}
-			
-			conn.close();
-			return null;
+			while (rs.next()) {
+				Paper ptemp = paperIdMap.get(rs.getInt("eprintid"));
+				
+				if(ptemp ==null){
+				ptemp = new Paper(rs.getInt("eprintid"), rs.getString("title"), rs.getString("issn"), rs.getString("publication"),
+						rs.getString("type"),rs.getString("types"));
+				ptemp = paperIdMap.put(ptemp);
+				}
+				
+				a.getArticles().add(ptemp);
 
+			}
+			conn.close();
 		} catch (SQLException e) {
-			 e.printStackTrace();
+			e.printStackTrace();
 			throw new RuntimeException("Errore Db");
 		}
 	}

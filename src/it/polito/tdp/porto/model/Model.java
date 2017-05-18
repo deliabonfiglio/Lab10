@@ -12,21 +12,21 @@ public class Model {
 	private Graph<Author, DefaultEdge> graph ;
 	private List<Author> authors= new ArrayList<Author>();
 	private DijkstraShortestPath<Author, DefaultEdge> dj;
+	private AuthorIdMap authorMap =new AuthorIdMap();
+	private PaperIdMap paperIdMap = new PaperIdMap();
 
 	public List<Author> getAuthors() {
-		authors.clear();
+		authors.clear();		
 		if(authors.isEmpty()){
 			PortoDAO dao = new PortoDAO();
-			authors.addAll(dao.getAllAuthors().values());
-		}
+			authors.addAll(dao.listAuthors(authorMap));
+				for(Author a: authors){
+					dao.getArticolsOfAuthor(a, paperIdMap);
+				}
+			}
 		return authors;
 	}
 
-	public List<Author> getCoauthors(Author autore){
-		PortoDAO dao = new PortoDAO();
-		
-		return dao.getCoauthors(autore);
-	}
 	
 	public void createGraph(){
 		if(graph==null){
@@ -36,15 +36,13 @@ public class Model {
 		PortoDAO dao = new PortoDAO();
 		
 		//aggiungo tutti gli autori come vertici
-		Graphs.addAllVertices(graph, this.authors);
+		Graphs.addAllVertices(graph, this.getAuthors());
 		
 		//aggiungo come archi tutti i coautori dell'autore
 		for(Author autore: graph.vertexSet()){
-				for(Author coautore: dao.getCoauthors(autore))
+				for(Author coautore: dao.getCoauthors(autore, authorMap))
 					graph.addEdge(autore, coautore);			
 		}
-		
-		System.out.println(graph.toString());
 	}
 	
 	public List<Author> getNeighbours(Author autore){
@@ -53,29 +51,37 @@ public class Model {
 
 	public List<Author> getAuthorsNotCoauthors(Author author) {
 		List<Author> notCoauthor = new ArrayList<Author>(this.getAuthors());
-		notCoauthor.removeAll(this.getCoauthors(author));
-		notCoauthor.remove(author);
+		PortoDAO dao = new PortoDAO();
+		
+//mi creo una lista di non coautori OGNI VOLTA CHE CHIAMO IL METODO!
+//Partendo da quella di tutti gli autori e rimuovendo i coautori dell'autore selezionato
+			notCoauthor.removeAll(dao.getCoauthors(author, authorMap));
+			notCoauthor.remove(author);
 		
 		return notCoauthor;
 	}
 	
-	public List<Paper> getShortestPath(Author a1, Author a2){
+	public Set<Paper> getShortestPath(Author a1, Author a2){
 		
-		dj= new DijkstraShortestPath<Author, DefaultEdge>(graph, a1, a2);
-		
-		PortoDAO dao= new PortoDAO();
-		List<Paper> papers = new ArrayList<Paper>();
-		
-		if(dj.getPathEdgeList()!=null){
-		List<DefaultEdge> lis = new ArrayList<DefaultEdge>(dj.getPathEdgeList());
-				
-		for(DefaultEdge dfe: lis){		
-			papers.add(dao.getArticolo(graph.getEdgeSource(dfe), graph.getEdgeTarget(dfe)));
-		}
-		}
-			return papers;
+		dj= new DijkstraShortestPath<Author, DefaultEdge>(graph, a1, a2);	
+//faccio un set cosi non devo controllare i duplicati, poichè si basa sull'equal se il paper già è stato trovato non lo prende
+		Set<Paper> papers = new HashSet<Paper>();
 
+		if(dj.getPathEdgeList()!=null){
+			List<DefaultEdge> lis = new ArrayList<DefaultEdge>(dj.getPathEdgeList());
+				
+			for(DefaultEdge dfe: lis){		
+				//papers.add(dao.getArticolo(graph.getEdgeSource(dfe), graph.getEdgeTarget(dfe)));
+				for(Paper pa1: graph.getEdgeSource(dfe).getArticles()){
+						for(Paper pa2: graph.getEdgeTarget(dfe).getArticles()){							
+							if(pa1.equals(pa2)){
+								papers.add(pa1);
+							}	
+						}	
+					}
+				}
+		}
+		
+		return papers;
 	}
 }
-
-

@@ -2,6 +2,7 @@ package it.polito.tdp.porto;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 import org.jgrapht.graph.DefaultEdge;
 
@@ -60,9 +61,11 @@ public class PortoController {
     		txtResult.setText("Selezionare entrambi gli autori\n");
     		return;
     	}
-    	if(model.getShortestPath(a1, a2)!=null)
-    	for (Paper ptemp : model.getShortestPath(a1, a2)){
-    		txtResult.appendText(ptemp.toString()+"\n");
+    	if(model.getShortestPath(a1, a2)!=null){
+    		Set<Paper> paperstemp= model.getShortestPath(a1, a2);
+    		txtResult.appendText("\nSequenza di articoli tra i due autori selezionati: \n");
+		    	for (Paper ptemp : paperstemp)
+		    		txtResult.appendText(ptemp.toString()+"\n");
     	} else{
     		txtResult.appendText("Non esiste un cammino tra gli autori selezionati\n");
     		return;
